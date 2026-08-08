@@ -929,44 +929,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 下载 6.12 用的 NTSync 补丁（如需其它补丁可再加）#####################
-          wget -q -O ntsync_base.patch \
-            "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_base.patch" || true
-          wget -q -O ntsync_compat_android16-6.12.patch \
-            "https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/refs/heads/main/NTsync/ntsync_compat_android16-6.12.patch" || true
-
-          # 应用补丁（存在才应用，--forward 避免重复失败）
-          for p in ntsync_base.patch ntsync_compat_android16-6.12.patch; do
-            if [ -f "$p" ]; then
-              if patch -p1 --forward < "$p"; then
-                echo "已应用补丁: $p"
-              else
-                echo "::warning::补丁 $p 应用失败或已应用，继续..."
-              fi
-            else
-              echo "::warning::未找到补丁 $p，跳过"
-            fi
-          done
-
-          # 使用工作流已设置的 DEFCONFIG（比硬编码路径更可靠）
-          DEF="${DEFCONFIG:-$GITHUB_WORKSPACE/unknown_defconfig}"
-          if [ ! -f "$DEF" ]; then
-            echo "::error::未找到 DEFCONFIG: $DEF"
-            exit 1
-          fi
-
-          # 将 CONFIG_NTSYNC 开启：优先替换 "# CONFIG_NTSYNC is not set"，其次覆盖已有项，否则追加
-          if grep -q '^# CONFIG_NTSYNC is not set' "$DEF"; then
-            sed -i 's/^# CONFIG_NTSYNC is not set/CONFIG_NTSYNC=y/' "$DEF"
-            echo "已替换 '# CONFIG_NTSYNC is not set' -> CONFIG_NTSYNC=y in $DEF"
-          elif grep -q '^CONFIG_NTSYNC=' "$DEF"; then
-            sed -i 's/^CONFIG_NTSYNC=.*/CONFIG_NTSYNC=y/' "$DEF"
-            echo "已覆盖现有 CONFIG_NTSYNC 条目为 y in $DEF"
-          else
-            echo 'CONFIG_NTSYNC=y' >> "$DEF"
-            echo "已追加 CONFIG_NTSYNC=y 到 $DEF"
-          fi
-
+        
           # 5.10 及以下还需要 POSIX_MQUEUE 的 kABI 修复#################################
           if [ "$KERNEL_VER" = "5.10" ]; then
             echo "应用 Droidspaces POSIX_MQUEUE kABI 修复补丁 (5.10)..."
